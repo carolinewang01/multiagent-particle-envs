@@ -14,6 +14,8 @@ _particles = {
     "simple_tag": "SimpleTag-v0",
     "simple_world_comm": "SimpleWorldComm-v0",
     "climbing_spread": "ClimbingSpread-v0",
+    "sparse_predator_prey": "SparsePredatorPrey-v0",
+    "predator_prey": "PredatorPrey-v0",
 }
 
 for scenario_name, gymkey in _particles.items():

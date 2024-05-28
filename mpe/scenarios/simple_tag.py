@@ -89,12 +89,15 @@ class Scenario(BaseScenario):
     def agent_reward(self, agent, world):
         # Agents are negatively rewarded if caught by adversaries
         rew = 0
-        shape = False
+        shape = True
+        shape_coef = 0.1
+        # compute reward 
         adversaries = self.adversaries(world)
         if shape:  # reward can optionally be shaped (increased reward for increased distance from adversary)
             for adv in adversaries:
-                rew += 0.1 * np.sqrt(np.sum(np.square(agent.state.p_pos - adv.state.p_pos)))
-        if agent.collide:
+                rew += shape_coef * np.sqrt(np.sum(np.square(agent.state.p_pos - adv.state.p_pos)))
+        if agent.collide: 
+            # penalize collisions with adversaries
             for a in adversaries:
                 if self.is_collision(a, agent):
                     rew -= 10
@@ -106,6 +109,7 @@ class Scenario(BaseScenario):
             if x < 1.0:
                 return (x - 0.9) * 10
             return min(np.exp(2 * x - 2), 10)
+        
         for p in range(world.dim_p):
             x = abs(agent.state.p_pos[p])
             rew -= bound(x)
@@ -115,14 +119,18 @@ class Scenario(BaseScenario):
     def adversary_reward(self, agent, world):
         # Adversaries are rewarded for collisions with agents
         rew = 0
-        shape = False
-        agents = self.good_agents(world)
+        shape = True
+        shape_coef = 0.1
+        good_agents = self.good_agents(world)
         adversaries = self.adversaries(world)
-        if shape:  # reward can optionally be shaped (decreased reward for increased distance from agents)
+        if shape:  # reward can optionally be shaped (each adv. is penalized for distance from nearest good agent)
+            # rew -= shape_coef * np.sqrt(np.sum(np.square(agent.state.p_pos - good_agents[0].state.p_pos)))
             for adv in adversaries:
-                rew -= 0.1 * min([np.sqrt(np.sum(np.square(a.state.p_pos - adv.state.p_pos))) for a in agents])
+                rew -= shape_coef * min([np.sqrt(np.sum(np.square(a.state.p_pos - adv.state.p_pos))) for a in good_agents])
         if agent.collide:
-            for ag in agents:
+            # if self.is_collision(agent, good_agents[0]):
+            #     rew += 10
+            for ag in good_agents:
                 for adv in adversaries:
                     if self.is_collision(ag, adv):
                         rew += 10

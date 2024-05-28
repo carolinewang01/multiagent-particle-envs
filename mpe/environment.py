@@ -117,7 +117,6 @@ class MultiAgentEnv(gym.Env):
         reward = np.sum(reward_n)
         if self.shared_reward:
             reward_n = [reward] * self.n
-
         return tuple(obs_n), reward_n, done_n, info_n
 
     def reset(self):

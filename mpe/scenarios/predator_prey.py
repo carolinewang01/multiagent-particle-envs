@@ -66,7 +66,6 @@ class Scenario(BaseScenario):
         else:
             return 0
 
-
     def is_collision(self, agent1, agent2):
         delta_pos = agent1.state.p_pos - agent2.state.p_pos
         dist = np.sqrt(np.sum(np.square(delta_pos)))
@@ -75,7 +74,9 @@ class Scenario(BaseScenario):
     
     def is_prey_caught(self, agent, world):
         prey = self.good_agents(world)[0]
-        return sum([self.is_collision(prey, adv) for adv in self.adversaries(world)]) >= 2
+        # whether two or more agents are colliding with the prey
+        num_collisions = sum([self.is_collision(prey, adv) for adv in self.adversaries(world)])
+        return num_collisions >= 2, num_collisions
 
     # return all agents that are not adversaries
     def good_agents(self, world):
@@ -87,12 +88,12 @@ class Scenario(BaseScenario):
 
 
     def reward(self, agent, world):
-        # Agents are rewarded based on minimum agent distance to each landmark
+        # Agents are rewarded based on collisions with prey and punishment for being caught by adversaries
         main_reward = self.adversary_reward(agent, world) if agent.adversary else self.agent_reward(agent, world)
         return main_reward
 
     def done(self, agent, world):
-        return self.is_prey_caught(agent, world)
+        return self.is_prey_caught(agent, world)[0]
             
     def agent_reward(self, agent, world):
         # Agents are negatively rewarded if caught by adversaries
@@ -122,11 +123,29 @@ class Scenario(BaseScenario):
 
     def adversary_reward(self, agent, world):
         prey = self.good_agents(world)[0]
+        rew = 0.0
+        shape = True
+
         # Adversaries are rewarded for collisions with agents
-        if self.is_prey_caught(agent, world):
-            return 1.0 if self.is_collision(prey, agent) else 0.0
-        else:
-            return 0.0
+        prey_caught, num_collisions = self.is_prey_caught(agent, world)
+        current_agent_collided = self.is_collision(agent, prey)
+        
+        if current_agent_collided:
+            # can only catch with >1 agents colliding
+            if prey_caught:
+                rew += 1.0
+            # punish for attempting to capture alone
+            if num_collisions == 1:
+                rew -= 0.0
+        # penalty for colliding with any other adversaries: 
+        for adv in self.adversaries(world):
+            if adv is agent: continue
+            if self.is_collision(adv, agent):
+                rew -= 0. # 0.1
+        if shape: 
+            shape_coef = 0.01
+            rew -= shape_coef * np.sqrt(np.sum(np.square(agent.state.p_pos - prey.state.p_pos)))
+        return rew
 
     def observation(self, agent, world):
         # get positions of all entities in this agent's reference frame
